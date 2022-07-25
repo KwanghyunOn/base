@@ -1,0 +1,75 @@
+exp:
+  name: edsr
+  ablation: baseline
+  root: ../experiments/toy/
+
+
+common:
+  scale: &scale 4
+
+
+model:
+  name: model.sr.edsr.EDSR
+  kwargs:
+    scale: *scale
+    depth: 16
+    n_colors: 3
+    n_feats: 128
+
+
+data:
+  transform:
+    train:
+      name: data.transforms.sr.SRTransform
+      kwargs:
+        size: 64
+    val:
+      name: data.transforms.sr.SRTransform
+      kwargs:
+        size: 192
+
+  dataset:
+    train:
+      name: data.datasets.sr.div2k.DIV2K
+      kwargs:
+        root: ../data/DIV2K
+        scale: *scale
+        train: True
+    val:
+      name: data.datasets.sr.div2k.DIV2K
+      kwargs:
+        root: ../data/DIV2K
+        scale: *scale
+        train: False
+
+  loader:
+    train:
+      kwargs:
+        batch_size: 32
+        num_workers: 4
+    val:
+      kwargs:
+        batch_size: 4
+        num_workers: 4
+
+
+optimizer:
+  name: torch.optim.Adam
+  kwargs:
+    lr: 1.e-4
+    betas: [0.9, 0.99]
+
+
+logger:
+  name: loggers.wandb.WandbLogger
+  kwargs: {}
+
+
+trainer:
+  name: trainer.sr.base_sr.SRTrainer
+  kwargs:
+    max_epochs: 10000
+    log_every_n_steps: 10
+    val_every_n_epochs: 10
+    save_ckpt_every_n_epochs: 10
+  
