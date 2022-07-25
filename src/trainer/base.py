@@ -50,11 +50,11 @@ class BaseTrainer(metaclass=ABCMeta):
     @abstractmethod
     def training_step(self, data):
         pass
-    
+
     @abstractmethod
     def validation_step(self, data):
         pass
-    
+
     @abstractmethod
     def validation_epoch_end(self, outputs):
         pass
@@ -64,7 +64,7 @@ class BaseTrainer(metaclass=ABCMeta):
             return self.model.module.state_dict()
         else:
             return self.model.state_dict()
-    
+
     def _load_state_dict(self, state_dict):
         if self.distributed:
             self.model.module.load_state_dict(state_dict)
@@ -80,16 +80,17 @@ class BaseTrainer(metaclass=ABCMeta):
             "logger": self.logger.state_dict(),
         }
         torch.save(ckpt, os.path.join(self.ckpt_path, "latest.ckpt"))
-    
+
     def _load_checkpoint(self):
         ckpt = torch.load(
-            os.path.join(self.ckpt_path, "latest.ckpt"), map_location="cpu",
+            os.path.join(self.ckpt_path, "latest.ckpt"),
+            map_location="cpu",
         )
         self.current_epoch = ckpt["epoch"] + 1
         self.global_step = ckpt["global_step"]
         self._load_state_dict(ckpt["model"])
         self.optimizer.load_state_dict(ckpt["optimizer"])
-    
+
     def run(self, resume=False):
         if resume:
             self._load_checkpoint()
@@ -101,7 +102,7 @@ class BaseTrainer(metaclass=ABCMeta):
             self.model.train()
             torch.set_grad_enabled(True)
             loader_train_tq = tqdm(
-                self.loader_train, 
+                self.loader_train,
                 disable=(not self.is_master),
                 ncols=100,
                 mininterval=0.1,
@@ -126,7 +127,10 @@ class BaseTrainer(metaclass=ABCMeta):
                 val_output = self.validation_epoch_end(val_outputs)
                 self.logger.log_metrics(val_output, step=self.global_step)
 
-            if self.is_master and self.current_epoch % self.save_ckpt_every_n_epochs == 0:
+            if (
+                self.is_master
+                and self.current_epoch % self.save_ckpt_every_n_epochs == 0
+            ):
                 self._save_checkpoint()
             self.current_epoch += 1
             dist_utils.wait()

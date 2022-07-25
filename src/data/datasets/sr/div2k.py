@@ -29,7 +29,12 @@ class DIV2K(ImageDataset):
     """
 
     def __init__(
-        self, root, scale, transform=None, is_binary=True, train=True,
+        self,
+        root,
+        scale,
+        transform=None,
+        is_binary=True,
+        train=True,
     ):
         split = "train" if train else "valid"
         deg = "bicubic"

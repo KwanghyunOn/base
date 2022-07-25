@@ -22,7 +22,7 @@ class WandbLogger(BaseLogger):
         self.run_id = self.experiment.id
         self.experiment.define_metric("train/step")
         self.experiment.define_metric("*", step_metric="train/step")
-    
+
     def log_metrics(self, metrics, step=None):
         if not self.is_master:
             return
@@ -30,7 +30,7 @@ class WandbLogger(BaseLogger):
             self.experiment.log({**metrics, "train/step": step})
         else:
             self.experiment.log(metrics)
-    
+
     def state_dict(self):
         if not self.is_master:
             return

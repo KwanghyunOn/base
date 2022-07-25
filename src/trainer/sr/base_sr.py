@@ -10,15 +10,12 @@ from utils.common import ld2dl
 class SRTrainer(BaseTrainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.evaluator = Evaluator(
-            metrics=["psnr"], 
-            data_range=2.0
-        )
-    
+        self.evaluator = Evaluator(metrics=["psnr"], data_range=2.0)
+
     def calc_loss(self, img_hr, img_sr):
         loss = F.l1_loss(img_hr, img_sr)
         return loss
-    
+
     def training_step(self, data):
         img_hr, img_lr = data["img_hr"], data["img_lr"]
         img_lr = img_lr.to(self.device)
@@ -29,11 +26,11 @@ class SRTrainer(BaseTrainer):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-    
+
         metrics = {"loss": loss}
         description = f"Loss: {loss.item():.4f}"
         return metrics, description
-    
+
     @torch.no_grad()
     def validation_step(self, data):
         img_hr, img_lr = data["img_hr"], data["img_lr"]
@@ -46,10 +43,9 @@ class SRTrainer(BaseTrainer):
 
         val_result = self.evaluator(img_hr, img_sr)
         return val_result
-    
+
     def validation_epoch_end(self, outputs):
         outputs = ld2dl(outputs)
         for k in outputs:
             outputs[k] = torch.mean(torch.stack(outputs[k]))
         return outputs
-        

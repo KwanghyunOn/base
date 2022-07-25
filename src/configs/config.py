@@ -11,7 +11,7 @@ class Config:
         with open(self.cfg_path) as f:
             self.cfg = yaml.load(f, Loader=yaml.FullLoader)
         self._set_dirs()
-    
+
     def _set_dirs(self):
         self.root = os.path.join(
             self.__call__("exp", "root"),
@@ -29,7 +29,7 @@ class Config:
         self.logdir = os.path.join(self.root, "logs")
         os.makedirs(self.logdir, exist_ok=True)
         shutil.copyfile(self.cfg_path, os.path.join(self.root, "config.yaml"))
-    
+
     def __call__(self, *keys, default=None):
         d = self.cfg
         for key in list(keys):

@@ -152,7 +152,14 @@ class LPIPS(nn.Module):
 
 
 class Evaluator:
-    def __init__(self, metrics, data_range=None, net_lpips="alex", device="cpu", dtype=torch.float32):
+    def __init__(
+        self,
+        metrics,
+        data_range=None,
+        net_lpips="alex",
+        device="cpu",
+        dtype=torch.float32,
+    ):
         self.metrics = metrics
         self.data_range = data_range
         if "psnr" in self.metrics:

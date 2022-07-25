@@ -7,13 +7,14 @@ from torch import nn
 
 
 def default_conv(
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        stride: int=1,
-        padding: typing.Optional[int]=None,
-        bias=True,
-        padding_mode: str='zeros'):
+    in_channels: int,
+    out_channels: int,
+    kernel_size: int,
+    stride: int = 1,
+    padding: typing.Optional[int] = None,
+    bias=True,
+    padding_mode: str = "zeros",
+):
 
     if padding is None:
         padding = (kernel_size - 1) // 2
@@ -34,23 +35,23 @@ def append_module(m, name, n_feats):
     if name is None:
         return
 
-    if name == 'batch':
+    if name == "batch":
         m.append(nn.BatchNorm2d(n_feats))
-    elif name == 'layer':
+    elif name == "layer":
         m.append(nn.GroupNorm(1, n_feats))
-    elif name == 'instance':
+    elif name == "instance":
         m.append(nn.InstanceNorm2d(n_feats))
 
-    if name == 'relu':
+    if name == "relu":
         m.append(nn.ReLU(True))
-    elif name == 'lrelu':
+    elif name == "lrelu":
         m.append(nn.LeakyReLU(negative_slope=0.2, inplace=True))
-    elif name == 'prelu':
+    elif name == "prelu":
         m.append(nn.PReLU())
 
 
 class ResBlock(nn.Sequential):
-    '''
+    """
     Make a residual block which consists of Conv-(Norm)-Act-Conv-(Norm).
 
     Args:
@@ -68,29 +69,32 @@ class ResBlock(nn.Sequential):
         See https://arxiv.org/pdf/1602.07261.pdf for more detail.
 
         To modify stride, change the conv function.
-    '''
+    """
 
     def __init__(
-            self,
-            n_feats: int,
-            kernel_size: int,
-            norm: typing.Optional[str]=None,
-            act: str='relu',
-            res_scale: float=1,
-            res_prob: float=1,
-            padding_mode: str='zeros',
-            conv=default_conv) -> None:
+        self,
+        n_feats: int,
+        kernel_size: int,
+        norm: typing.Optional[str] = None,
+        act: str = "relu",
+        res_scale: float = 1,
+        res_prob: float = 1,
+        padding_mode: str = "zeros",
+        conv=default_conv,
+    ) -> None:
 
         bias = norm is None
         m = []
         for i in range(2):
-            m.append(conv(
-                n_feats,
-                n_feats,
-                kernel_size,
-                bias=bias,
-                padding_mode=padding_mode,
-            ))
+            m.append(
+                conv(
+                    n_feats,
+                    n_feats,
+                    kernel_size,
+                    bias=bias,
+                    padding_mode=padding_mode,
+                )
+            )
             append_module(m, norm, n_feats)
             if i == 0:
                 append_module(m, act, n_feats)
@@ -109,9 +113,9 @@ class ResBlock(nn.Sequential):
 
 
 class Upsampler(nn.Sequential):
-    '''
+    """
     Make an upsampling block using sub-pixel convolution
-    
+
     Args:
 
     Note:
@@ -119,17 +123,18 @@ class Upsampler(nn.Sequential):
         "Real-Time Single Image and Video Super-Resolution
         Using an Efficient Sub-pixel Convolutional Neural Network"
         See https://arxiv.org/pdf/1609.05158.pdf for more detail
-    '''
+    """
 
     def __init__(
-            self,
-            scale: int,
-            n_feats: int,
-            norm: typing.Optional[str]=None,
-            act: typing.Optional[str]=None,
-            bias: bool=True,
-            padding_mode: str='zeros',
-            conv=default_conv):
+        self,
+        scale: int,
+        n_feats: int,
+        norm: typing.Optional[str] = None,
+        act: typing.Optional[str] = None,
+        bias: bool = True,
+        padding_mode: str = "zeros",
+        conv=default_conv,
+    ):
 
         bias = norm is None
         m = []
@@ -137,24 +142,28 @@ class Upsampler(nn.Sequential):
         # check if the scale is power of 2
         if int(log_scale) == log_scale:
             for _ in range(int(log_scale)):
-                m.append(conv(
-                    n_feats,
-                    4 * n_feats,
-                    3,
-                    bias=bias,
-                    padding_mode=padding_mode,
-                ))
+                m.append(
+                    conv(
+                        n_feats,
+                        4 * n_feats,
+                        3,
+                        bias=bias,
+                        padding_mode=padding_mode,
+                    )
+                )
                 m.append(nn.PixelShuffle(2))
                 append_module(m, norm, n_feats)
                 append_module(m, act, n_feats)
         elif scale == 3:
-            m.append(conv(
-                n_feats,
-                9 * n_feats,
-                3,
-                bias=bias,
-                padding_mode=padding_mode,
-            ))
+            m.append(
+                conv(
+                    n_feats,
+                    9 * n_feats,
+                    3,
+                    bias=bias,
+                    padding_mode=padding_mode,
+                )
+            )
             m.append(nn.PixelShuffle(3))
             append_module(m, norm, n_feats)
             append_module(m, act, n_feats)
@@ -165,30 +174,35 @@ class Upsampler(nn.Sequential):
 
 
 class EDSR(nn.Module):
-    '''
+    """
     EDSR model
 
     Note:
         From Lim et al.,
         "Enhanced Deep Residual Networks for Single Image Super-Resolution"
         See https://arxiv.org/pdf/1707.02921.pdf for more detail.
-    '''
+    """
 
     def __init__(
-            self,
-            scale: int=4,
-            depth: int=16,
-            n_colors: int=3,
-            n_feats: int=64,
-            res_scale: float=1,
-            res_prob: float=1,
-            conv=default_conv):
+        self,
+        scale: int = 4,
+        depth: int = 16,
+        n_colors: int = 3,
+        n_feats: int = 64,
+        res_scale: float = 1,
+        res_prob: float = 1,
+        conv=default_conv,
+    ):
 
         super().__init__()
         self.n_colors = n_colors
         self.conv = conv(n_colors, n_feats, 3)
         resblock = lambda: ResBlock(
-            n_feats, 3, conv=conv, res_scale=res_scale, res_prob=res_prob,
+            n_feats,
+            3,
+            conv=conv,
+            res_scale=res_scale,
+            res_prob=res_prob,
         )
         m = [resblock() for _ in range(depth)]
         m.append(conv(n_feats, n_feats, 3))
@@ -202,24 +216,28 @@ class EDSR(nn.Module):
         x = self.conv(x)
         x = x + self.resblocks(x)
         x = self.recon(x)
-        return x 
+        return x
 
 
 class EDSREncoder(nn.Module):
     def __init__(
         self,
-        depth: int=16,
-        n_colors: int=3,
-        n_feats: int=64,
-        res_scale: float=1,
-        res_prob: float=1,
-        conv=default_conv
+        depth: int = 16,
+        n_colors: int = 3,
+        n_feats: int = 64,
+        res_scale: float = 1,
+        res_prob: float = 1,
+        conv=default_conv,
     ):
         super().__init__()
         self.n_colors = n_colors
         self.conv = conv(n_colors, n_feats, 3)
         resblock = lambda: ResBlock(
-            n_feats, 3, conv=conv, res_scale=res_scale, res_prob=res_prob,
+            n_feats,
+            3,
+            conv=conv,
+            res_scale=res_scale,
+            res_prob=res_prob,
         )
         m = [resblock() for _ in range(depth)]
         m.append(conv(n_feats, n_feats, 3))
@@ -228,24 +246,28 @@ class EDSREncoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = x + self.resblocks(x)
-        return x 
+        return x
 
 
 class EDSREncoder(nn.Module):
     def __init__(
         self,
-        depth: int=16,
-        n_colors: int=3,
-        n_feats: int=64,
-        res_scale: float=1,
-        res_prob: float=1,
-        conv=default_conv
+        depth: int = 16,
+        n_colors: int = 3,
+        n_feats: int = 64,
+        res_scale: float = 1,
+        res_prob: float = 1,
+        conv=default_conv,
     ):
         super().__init__()
         self.n_colors = n_colors
         self.conv = conv(n_colors, n_feats, 3)
         resblock = lambda: ResBlock(
-            n_feats, 3, conv=conv, res_scale=res_scale, res_prob=res_prob,
+            n_feats,
+            3,
+            conv=conv,
+            res_scale=res_scale,
+            res_prob=res_prob,
         )
         m = [resblock() for _ in range(depth)]
         m.append(conv(n_feats, n_feats, 3))
@@ -254,24 +276,28 @@ class EDSREncoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = x + self.resblocks(x)
-        return x 
+        return x
 
 
 class EDSRDecoder(nn.Module):
     def __init__(
         self,
-        scale: int=4,
-        depth: int=16,
-        n_colors: int=3,
-        n_feats: int=64,
-        res_scale: float=1,
-        res_prob: float=1,
-        conv=default_conv
+        scale: int = 4,
+        depth: int = 16,
+        n_colors: int = 3,
+        n_feats: int = 64,
+        res_scale: float = 1,
+        res_prob: float = 1,
+        conv=default_conv,
     ):
         super().__init__()
         self.n_colors = n_colors
         resblock = lambda: ResBlock(
-            n_feats, 3, conv=conv, res_scale=res_scale, res_prob=res_prob,
+            n_feats,
+            3,
+            conv=conv,
+            res_scale=res_scale,
+            res_prob=res_prob,
         )
         m = [resblock() for _ in range(depth)]
         m.append(conv(n_feats, n_feats, 3))
@@ -284,11 +310,11 @@ class EDSRDecoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.resblocks(x)
         x = self.recon(x)
-        return x 
-
+        return x
 
 
 import thop
+
 if __name__ == "__main__":
     device = torch.device("cuda")
     model = EDSREncoder(
@@ -297,11 +323,11 @@ if __name__ == "__main__":
         n_feats=128,
     )
     model.to(device)
-    x = torch.randn(1,3,64,64)
+    x = torch.randn(1, 3, 64, 64)
     x = x.to(device)
     y = model(x)
     print(y.shape)
-    macs, params = thop.profile(model, inputs=(x, ))
+    macs, params = thop.profile(model, inputs=(x,))
     print(thop.clever_format([macs, params], "%.3f"))
 
     decoder = EDSRDecoder(
@@ -312,5 +338,5 @@ if __name__ == "__main__":
     decoder.to(device)
     z = decoder(y)
     print(z.shape)
-    macs, params = thop.profile(decoder, inputs=(y, ))
+    macs, params = thop.profile(decoder, inputs=(y,))
     print(thop.clever_format([macs, params], "%.3f"))
